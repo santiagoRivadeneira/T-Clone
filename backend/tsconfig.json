@@ -8,8 +8,6 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
-    "moduleResolution": "node",
-    "baseUrl": ".",
     "types": ["node"]
   },
   "include": ["src/**/*", "tests/**/*", "prisma/**/*"]

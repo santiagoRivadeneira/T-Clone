@@ -33,13 +33,6 @@ describe('Notification routes', () => {
       .post(`/api/users/${(await createTestUser(app)).user.username}/follow`)
       .set('Authorization', `Bearer ${tokenA}`)
 
-    // A follows B directly to trigger notif on B
-    const bUsername = (
-      await supertest(app.server)
-        .get(`/api/users/search?q=test`)
-        .set('Authorization', `Bearer ${tokenB}`)
-    ).body.users.find((u: any) => u.id !== (await supertest(app.server).get('/api/auth/me').set('Authorization', `Bearer ${tokenA}`)).body.user.id)
-
     // Trigger a LIKE notification: A likes B's tweet
     await supertest(app.server)
       .post(`/api/tweets/${tweetId}/like`)
