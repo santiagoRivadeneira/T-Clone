@@ -1,0 +1,174 @@
+═══════════════════════════════════════════════════════════════
+  TWITTER CLONE — "The Flock" Challenge
+  Resumen del proyecto
+═══════════════════════════════════════════════════════════════
+
+STACK
+─────
+Frontend : React 18 + Vite + TanStack Query + React Router v6
+           Tailwind CSS + shadcn/ui + Lucide Icons
+Backend  : Fastify + TypeScript + Prisma ORM + PostgreSQL
+           JWT (RS256) + Zod (validación) + Vitest + Supertest
+
+ESTRUCTURA DE ARCHIVOS CLAVE
+─────────────────────────────
+twitter-clon/
+├── src/                          ← Frontend React
+│   ├── pages/                    ← Páginas principales
+│   │   ├── Home.jsx              ← Timeline con SSE
+│   │   ├── Profile.jsx           ← Perfil de usuario
+│   │   ├── PostDetail.jsx        ← Vista detallada de tweet
+│   │   ├── Notifications.jsx     ← Centro de notificaciones
+│   │   ├── Bookmarks.jsx         ← Guardados
+│   │   ├── Explore.jsx           ← Búsqueda de usuarios
+│   │   ├── Login.jsx / Register.jsx
+│   │   ├── Messages.jsx          ← (stub, sin backend)
+│   │   └── Settings.jsx
+│   ├── components/
+│   │   ├── post/PostCard.jsx     ← Card de tweet reutilizable
+│   │   ├── post/PostComposer.jsx ← Composer de nuevo tweet
+│   │   ├── post/ReplyModal.jsx   ← Modal de respuesta
+│   │   └── layout/              ← Sidebar, MainLayout, RightPanel
+│   ├── context/
+│   │   ├── AuthContext.jsx       ← Sesión + token
+│   │   └── SSEContext.jsx        ← Conexión SSE compartida
+│   ├── hooks/
+│   │   ├── useInfiniteScroll.js  ← IntersectionObserver estable
+│   │   └── useTimelineSSE.js     ← Wrapper para SSE de timeline
+│   └── lib/api.js                ← Cliente HTTP centralizado
+│
+└── backend/
+    ├── prisma/
+    │   └── schema.prisma         ← Modelos de BD
+    ├── src/
+    │   ├── app.ts                ← Fastify + plugins + error handler
+    │   ├── routes/
+    │   │   ├── auth.ts           ← Register, Login, Me, UpdateMe
+    │   │   ├── tweets.ts         ← CRUD tweets + Like/Retweet/Bookmark
+    │   │   ├── users.ts          ← Perfil, Search, Follow/Unfollow
+    │   │   ├── notifications.ts  ← List, UnreadCount, MarkRead
+    │   │   └── stream.ts         ← Endpoint SSE
+    │   ├── lib/
+    │   │   ├── prisma.ts         ← Singleton PrismaClient
+    │   │   ├── pubsub.ts         ← In-memory pub/sub por userId
+    │   │   └── notify.ts         ← createNotification() helper
+    │   └── middleware/
+    │       └── authenticate.ts   ← Guard JWT para rutas protegidas
+    └── tests/
+        ├── auth.test.ts
+        ├── tweets.test.ts
+        ├── users.test.ts
+        └── notifications.test.ts
+
+═══════════════════════════════════════════════════════════════
+  FUNCIONALIDADES IMPLEMENTADAS
+═══════════════════════════════════════════════════════════════
+
+AUTENTICACIÓN
+  ✓ Registro con username, email, password (hash bcrypt)
+  ✓ Login con JWT de 7 días
+  ✓ Perfil propio (GET /auth/me, PATCH /auth/me)
+  ✓ Actualización de displayName, bio, avatarUrl
+
+TWEETS
+  ✓ Crear tweet (hasta 280 caracteres, sin espacios vacíos)
+  ✓ Eliminar tweet propio (403 si es ajeno)
+  ✓ Responder a un tweet (replyToId)
+  ✓ Vista detallada con lista de replies
+  ✓ Paginación por cursor en todas las listas
+
+INTERACCIONES (todas idempotentes — nunca retornan 409)
+  ✓ Like / Unlike     POST/DELETE /tweets/:id/like
+  ✓ Retweet / Undo    POST/DELETE /tweets/:id/retweet
+  ✓ Bookmark / Undo   POST/DELETE /tweets/:id/bookmark
+  ✓ Lista de bookmarks paginada (GET /tweets/bookmarks/list)
+
+USUARIOS
+  ✓ Perfil público con contador de seguidores/siguiendo/tweets
+  ✓ Búsqueda por username o displayName (con límite de 100 chars)
+  ✓ Follow / Unfollow (idempotente, guard contra auto-follow)
+  ✓ Lista de seguidores y seguidos
+  ✓ Flag isFollowing en perfil y búsqueda (cuando autenticado)
+
+TIMELINE
+  ✓ Timeline de tweets de usuarios seguidos (cursor pagination)
+  ✓ Solo tweets top-level (no replies)
+
+NOTIFICACIONES
+  ✓ Creación automática al: dar like, retweetear, responder, seguir
+  ✓ Guard: no se notifica al propio autor de la acción
+  ✓ Lista paginada con actor + tweet
+  ✓ Contador de no leídas (GET /notifications/unread-count)
+  ✓ Marcar todas como leídas (PATCH /notifications/read)
+  ✓ Badge de no leídas en sidebar (se actualiza en tiempo real)
+
+TIEMPO REAL (Server-Sent Events)
+  ✓ Una sola conexión SSE por sesión (SSEContext compartido)
+  ✓ new-tweet: aparece banner en timeline para mostrar nuevos tweets
+  ✓ delete-tweet: se elimina del timeline sin recargar
+  ✓ new-notification: incrementa badge de notificaciones en sidebar
+  ✓ Keep-alive ping cada 25 s para evitar timeout de proxies
+  ✓ Reconexión automática del cliente (retry: 3000)
+
+UI / UX
+  ✓ Diseño dark mode al estilo Twitter/X
+  ✓ Sidebar de navegación (desktop) + bottom nav (mobile)
+  ✓ Infinite scroll estable con IntersectionObserver
+  ✓ Optimistic updates con rollback en likes, retweets, bookmarks
+  ✓ Avatar con fallback a inicial del displayName
+  ✓ Paginación por cursor en timeline, perfil, bookmarks, notifs
+
+═══════════════════════════════════════════════════════════════
+  COBERTURA DE TESTS (backend)
+═══════════════════════════════════════════════════════════════
+  auth.test.ts          → Register, Login, /me, UpdateMe
+  tweets.test.ts        → Create, Get, Delete, Like, Retweet,
+                          Bookmark, Bookmarks/list, Timeline
+  users.test.ts         → Search, Profile, User tweets,
+                          Follow/Unfollow (idempotencia)
+  notifications.test.ts → List, UnreadCount, MarkRead,
+                          Self-notification guard
+
+  Cobertura estimada: ~90%+ del backend
+  Todos los endpoints documentados en el challenge están cubiertos.
+
+═══════════════════════════════════════════════════════════════
+  MEJORAS DE CALIDAD APLICADAS EN LA REVISIÓN FINAL
+═══════════════════════════════════════════════════════════════
+  ✓ PostDetail: retweet y bookmark ahora llaman a la API real
+    (antes solo cambiaban estado local y se perdían al recargar)
+  ✓ Tweets: el contenido se hace trim() antes de validar min(1)
+    → tweets de sólo espacios ahora son rechazados con 400
+  ✓ Búsqueda de usuarios: query limitada a 100 caracteres
+    → evita búsquedas masivas intencionadas
+  ✓ JWT_SECRET: buildApp() lanza error al iniciar si la variable
+    no está definida en NODE_ENV=production
+
+═══════════════════════════════════════════════════════════════
+  COSAS CONOCIDAS / NO IMPLEMENTADAS (fuera de alcance)
+═══════════════════════════════════════════════════════════════
+  ✗ Mensajes directos (DM) — página stub, sin backend
+  ✗ Subida de imágenes — el frontend las previsualiza pero
+    no hay endpoint de upload; se acepta imageUrl externo
+  ✗ Trending topics — datos estáticos hardcodeados en RightPanel
+  ✗ Refresh tokens — el JWT dura 7 días sin rotación
+  ✗ Rate limiting en endpoints de auth
+  ✗ Tests de frontend (unitarios/e2e)
+
+═══════════════════════════════════════════════════════════════
+  COMANDOS ÚTILES
+═══════════════════════════════════════════════════════════════
+
+  # Backend
+  cd backend
+  npm run dev          ← inicia servidor en :3000
+  npm run db:migrate   ← aplica migraciones Prisma
+  npm run db:generate  ← regenera Prisma Client
+  npm run db:seed      ← datos de prueba
+  npm test             ← corre todos los tests
+
+  # Frontend
+  cd .. (raíz)
+  npm run dev          ← inicia Vite en :5173
+
+═══════════════════════════════════════════════════════════════
