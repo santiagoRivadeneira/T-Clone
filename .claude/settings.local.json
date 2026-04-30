@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install *)",
+      "Bash(npx vitest *)",
+      "Bash(dir \"C:\\\\Program Files\\\\PostgreSQL\")"
+    ]
+  }
+}
