@@ -20,6 +20,7 @@ describe('User routes', () => {
     await app.close()
   })
 
+  // ─── Search ───────────────────────────────────────────────────────────────
   describe('GET /api/users/search', () => {
     beforeAll(async () => {
       await createTestUser(app, { username: 'alice_dev', displayName: 'Alice Developer' })
@@ -49,8 +50,17 @@ describe('User routes', () => {
       expect(res.status).toBe(200)
       expect(res.body.users).toHaveLength(0)
     })
+
+    it('includes isFollowing flag when authenticated', async () => {
+      const res = await supertest(app.server)
+        .get('/api/users/search?q=alice')
+        .set('Authorization', `Bearer ${token}`)
+      expect(res.status).toBe(200)
+      expect(res.body.users[0]).toHaveProperty('isFollowing')
+    })
   })
 
+  // ─── Profile ──────────────────────────────────────────────────────────────
   describe('GET /api/users/:username', () => {
     it('returns user profile', async () => {
       const res = await supertest(app.server).get(`/api/users/${username}`)
@@ -75,8 +85,14 @@ describe('User routes', () => {
         .set('Authorization', `Bearer ${token}`)
       expect(res.body.user.isFollowing).toBe(true)
     })
+
+    it('isFollowing is false for unauthenticated requests', async () => {
+      const res = await supertest(app.server).get(`/api/users/${username}`)
+      expect(res.body.user.isFollowing).toBe(false)
+    })
   })
 
+  // ─── User tweets ──────────────────────────────────────────────────────────
   describe('GET /api/users/:username/tweets', () => {
     let tweetUsername: string
     let tweetToken: string
@@ -85,7 +101,6 @@ describe('User routes', () => {
       const u = await createTestUser(app)
       tweetUsername = u.user.username
       tweetToken = u.token
-      // create 3 tweets
       for (const content of ['U tweet 1', 'U tweet 2', 'U tweet 3']) {
         await supertest(app.server)
           .post('/api/tweets')
@@ -100,13 +115,13 @@ describe('User routes', () => {
       expect(res.body.tweets.length).toBeGreaterThanOrEqual(3)
     })
 
-    it('supports pagination', async () => {
-      const first = await supertest(app.server).get(`/api/users/${tweetUsername}/tweets?limit=2`)
+    it('supports cursor pagination', async () => {
+      const first = await supertest(app.server)
+        .get(`/api/users/${tweetUsername}/tweets?limit=2`)
       expect(first.body.nextCursor).toBeDefined()
 
-      const second = await supertest(app.server).get(
-        `/api/users/${tweetUsername}/tweets?limit=2&cursor=${first.body.nextCursor}`
-      )
+      const second = await supertest(app.server)
+        .get(`/api/users/${tweetUsername}/tweets?limit=2&cursor=${first.body.nextCursor}`)
       expect(second.status).toBe(200)
     })
 
@@ -116,6 +131,7 @@ describe('User routes', () => {
     })
   })
 
+  // ─── Follow / Unfollow (idempotent) ───────────────────────────────────────
   describe('Follow / Unfollow', () => {
     let followerToken: string
     let targetUsername: string
@@ -132,15 +148,15 @@ describe('User routes', () => {
       const res = await supertest(app.server)
         .post(`/api/users/${targetUsername}/follow`)
         .set('Authorization', `Bearer ${followerToken}`)
-      expect(res.status).toBe(201)
+      expect(res.status).toBe(200)
       expect(res.body.following).toBe(true)
     })
 
-    it('cannot follow the same user twice', async () => {
+    it('following the same user twice is idempotent (200)', async () => {
       const res = await supertest(app.server)
         .post(`/api/users/${targetUsername}/follow`)
         .set('Authorization', `Bearer ${followerToken}`)
-      expect(res.status).toBe(409)
+      expect(res.status).toBe(200)
     })
 
     it('cannot follow yourself', async () => {
@@ -160,12 +176,12 @@ describe('User routes', () => {
     it('returns following list', async () => {
       const follower = await createTestUser(app)
       const target = await createTestUser(app)
-
       await supertest(app.server)
         .post(`/api/users/${target.user.username}/follow`)
         .set('Authorization', `Bearer ${follower.token}`)
 
-      const res = await supertest(app.server).get(`/api/users/${follower.user.username}/following`)
+      const res = await supertest(app.server)
+        .get(`/api/users/${follower.user.username}/following`)
       expect(res.status).toBe(200)
       expect(res.body.users.some((u: any) => u.username === target.user.username)).toBe(true)
     })
@@ -177,11 +193,11 @@ describe('User routes', () => {
       expect(res.status).toBe(204)
     })
 
-    it('returns 404 when unfollowing someone not followed', async () => {
+    it('unfollowing someone not followed is idempotent (204)', async () => {
       const res = await supertest(app.server)
         .delete(`/api/users/${targetUsername}/follow`)
         .set('Authorization', `Bearer ${followerToken}`)
-      expect(res.status).toBe(404)
+      expect(res.status).toBe(204)
     })
 
     it('returns 404 for non-existent user on follow', async () => {
@@ -193,6 +209,11 @@ describe('User routes', () => {
 
     it('requires auth to follow', async () => {
       const res = await supertest(app.server).post(`/api/users/${targetUsername}/follow`)
+      expect(res.status).toBe(401)
+    })
+
+    it('requires auth to unfollow', async () => {
+      const res = await supertest(app.server).delete(`/api/users/${targetUsername}/follow`)
       expect(res.status).toBe(401)
     })
   })
