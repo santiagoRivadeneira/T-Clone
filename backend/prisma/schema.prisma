@@ -1,0 +1,111 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  username     String   @unique
+  displayName  String
+  bio          String?
+  avatarUrl    String?
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  tweets        Tweet[]
+  likes         Like[]
+  retweets      Retweet[]
+  bookmarks     Bookmark[]
+  followers     Follow[]         @relation("following")
+  following     Follow[]         @relation("follower")
+  notifications Notification[]   @relation("notif_recipient")
+  notifActions  Notification[]   @relation("notif_actor")
+}
+
+model Tweet {
+  id        String   @id @default(cuid())
+  content   String   @db.VarChar(280)
+  imageUrl  String?
+  authorId  String
+  replyToId String?
+  createdAt DateTime @default(now())
+
+  author        User           @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  replyTo       Tweet?         @relation("replies", fields: [replyToId], references: [id])
+  replies       Tweet[]        @relation("replies")
+  likes         Like[]
+  retweets      Retweet[]
+  bookmarks     Bookmark[]
+  notifications Notification[]
+}
+
+model Bookmark {
+  userId    String
+  tweetId   String
+  createdAt DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tweet Tweet @relation(fields: [tweetId], references: [id], onDelete: Cascade)
+
+  @@id([userId, tweetId])
+}
+
+model Retweet {
+  userId    String
+  tweetId   String
+  createdAt DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tweet Tweet @relation(fields: [tweetId], references: [id], onDelete: Cascade)
+
+  @@id([userId, tweetId])
+}
+
+model Like {
+  userId    String
+  tweetId   String
+  createdAt DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tweet Tweet @relation(fields: [tweetId], references: [id], onDelete: Cascade)
+
+  @@id([userId, tweetId])
+}
+
+model Follow {
+  followerId  String
+  followingId String
+  createdAt   DateTime @default(now())
+
+  follower  User @relation("follower", fields: [followerId], references: [id], onDelete: Cascade)
+  following User @relation("following", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@id([followerId, followingId])
+}
+
+enum NotifType {
+  FOLLOW
+  LIKE
+  RETWEET
+  REPLY
+}
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  actorId   String
+  type      NotifType
+  tweetId   String?
+  read      Boolean   @default(false)
+  createdAt DateTime  @default(now())
+
+  user   User   @relation("notif_recipient", fields: [userId], references: [id], onDelete: Cascade)
+  actor  User   @relation("notif_actor", fields: [actorId], references: [id], onDelete: Cascade)
+  tweet  Tweet? @relation(fields: [tweetId], references: [id], onDelete: SetNull)
+}
