@@ -16,8 +16,8 @@ export default function PostDetail() {
   const queryClient = useQueryClient()
 
   const [liked, setLiked] = useState(null) // null = use server value
-  const [retweeted, setRetweeted] = useState(false)
-  const [bookmarked, setBookmarked] = useState(false)
+  const [retweeted, setRetweeted] = useState(null)
+  const [bookmarked, setBookmarked] = useState(null)
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ['tweet', postId],
@@ -26,12 +26,15 @@ export default function PostDetail() {
 
   const post = data?.tweet
 
-  // Resolve liked state: local override takes precedence over server
   const isLiked = liked !== null ? liked : post?.liked ?? false
+  const isRetweeted = retweeted !== null ? retweeted : post?.retweeted ?? false
+  const isBookmarked = bookmarked !== null ? bookmarked : post?.bookmarked ?? false
+
   const likesCount = (post?.likesCount ?? 0) + (
-    liked !== null
-      ? (liked ? 1 : -1) - (post?.liked ? 1 : 0)
-      : 0
+    liked !== null ? (liked ? 1 : -1) - (post?.liked ? 1 : 0) : 0
+  )
+  const displayRetweetsCount = (post?.retweetsCount ?? 0) + (
+    retweeted !== null ? (retweeted ? 1 : -1) - (post?.retweeted ? 1 : 0) : 0
   )
 
   async function handleLike() {
@@ -46,6 +49,36 @@ export default function PostDetail() {
       )
     } catch {
       setLiked(wasLiked)
+    }
+  }
+
+  async function handleRetweet() {
+    if (!post) return
+    const wasRetweeted = isRetweeted
+    setRetweeted(!wasRetweeted)
+    try {
+      if (wasRetweeted) await api.tweets.unretweet(post.id)
+      else await api.tweets.retweet(post.id)
+      queryClient.setQueryData(['tweet', postId], old =>
+        old ? { ...old, tweet: { ...old.tweet, retweeted: !wasRetweeted } } : old
+      )
+    } catch {
+      setRetweeted(wasRetweeted)
+    }
+  }
+
+  async function handleBookmark() {
+    if (!post) return
+    const wasBookmarked = isBookmarked
+    setBookmarked(!wasBookmarked)
+    try {
+      if (wasBookmarked) await api.tweets.unbookmark(post.id)
+      else await api.tweets.bookmark(post.id)
+      queryClient.setQueryData(['tweet', postId], old =>
+        old ? { ...old, tweet: { ...old.tweet, bookmarked: !wasBookmarked } } : old
+      )
+    } catch {
+      setBookmarked(wasBookmarked)
     }
   }
 
@@ -142,6 +175,12 @@ export default function PostDetail() {
               <span className="text-[#71767b] ml-1">Me gusta</span>
             </span>
           )}
+          {displayRetweetsCount > 0 && (
+            <span>
+              <strong className="text-[#e7e9ea]">{formatCount(displayRetweetsCount)}</strong>
+              <span className="text-[#71767b] ml-1">Retweets</span>
+            </span>
+          )}
           {post.repliesCount > 0 && (
             <span>
               <strong className="text-[#e7e9ea]">{formatCount(post.repliesCount)}</strong>
@@ -156,8 +195,8 @@ export default function PostDetail() {
             <span className="icon-wrap"><MessageCircle className="w-5 h-5" /></span>
           </button>
           <button
-            className={cn('tweet-action-btn retweet', retweeted && 'active')}
-            onClick={() => setRetweeted(r => !r)}
+            className={cn('tweet-action-btn retweet', isRetweeted && 'active')}
+            onClick={handleRetweet}
           >
             <span className="icon-wrap"><Repeat2 className="w-5 h-5" /></span>
           </button>
@@ -173,11 +212,11 @@ export default function PostDetail() {
             <span className="icon-wrap"><BarChart2 className="w-5 h-5" /></span>
           </button>
           <button
-            className={cn('tweet-action-btn bookmark', bookmarked && 'active')}
-            onClick={() => setBookmarked(b => !b)}
+            className={cn('tweet-action-btn bookmark', isBookmarked && 'active')}
+            onClick={handleBookmark}
           >
             <span className="icon-wrap">
-              <Bookmark className={cn('w-5 h-5', bookmarked && 'fill-brand')} />
+              <Bookmark className={cn('w-5 h-5', isBookmarked && 'fill-brand')} />
             </span>
           </button>
           <button className="tweet-action-btn">

@@ -22,7 +22,9 @@ const userRoutes: FastifyPluginAsync = async (fastify) => {
   // GET /api/users/search?q=
   fastify.get('/search', async (request, reply) => {
     const { q } = request.query as { q?: string }
-    if (!q || q.trim().length === 0) return reply.send({ users: [] })
+    const trimmed = q?.trim() ?? ''
+    if (!trimmed || trimmed.length === 0) return reply.send({ users: [] })
+    if (trimmed.length > 100) return reply.status(400).send({ error: 'Query too long' })
 
     let currentUserId: string | undefined
     try {
@@ -33,8 +35,8 @@ const userRoutes: FastifyPluginAsync = async (fastify) => {
     const users = await prisma.user.findMany({
       where: {
         OR: [
-          { username: { contains: q, mode: 'insensitive' } },
-          { displayName: { contains: q, mode: 'insensitive' } },
+          { username: { contains: trimmed, mode: 'insensitive' } },
+          { displayName: { contains: trimmed, mode: 'insensitive' } },
         ],
       },
       select: {

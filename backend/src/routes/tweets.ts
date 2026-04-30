@@ -6,7 +6,7 @@ import { publish } from '../lib/pubsub'
 import { createNotification } from '../lib/notify'
 
 const CreateTweetSchema = z.object({
-  content: z.string().min(1).max(280),
+  content: z.string().trim().min(1).max(280),
   replyToId: z.string().optional(),
   imageUrl: z.string().url().optional(),
 })
