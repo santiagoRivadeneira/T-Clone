@@ -16,6 +16,7 @@ export default function Messages() {
   const [activeUsername, setActiveUsername] = useState(conversationId ?? null)
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
+  const [sendError, setSendError] = useState(null)
   // Local state for real-time messages — avoids cache refetch overwriting optimistic updates
   const [liveMessages, setLiveMessages] = useState([])
   const bottomRef = useRef(null)
@@ -72,13 +73,14 @@ export default function Messages() {
     const content = input.trim()
     setInput('')
     setSending(true)
+    setSendError(null)
     try {
       const res = await api.messages.send(activeUsername, content)
-      // Append directly to local state — instant, no cache dependency
       setLiveMessages(prev => [...prev, res.message])
       queryClient.invalidateQueries({ queryKey: ['conversations'] })
-    } catch {
+    } catch (err) {
       setInput(content)
+      setSendError('No se pudo enviar el mensaje')
     } finally {
       setSending(false)
     }
@@ -180,7 +182,7 @@ export default function Messages() {
 
           {/* Messages */}
           <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-2">
-            {chatLoading ? (
+            {chatLoading && allMessages.length === 0 ? (
               <div className="flex justify-center py-16">
                 <Loader2 className="w-6 h-6 text-brand animate-spin" />
               </div>
@@ -209,23 +211,26 @@ export default function Messages() {
           {/* Input */}
           <form
             onSubmit={handleSend}
-            className="border-t border-dark-border px-4 py-3 flex items-center gap-3"
+            className="border-t border-dark-border px-4 py-3 flex flex-col gap-2"
           >
-            <input
-              value={input}
-              onChange={e => setInput(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) handleSend(e) }}
-              placeholder="Escribí un mensaje..."
-              maxLength={1000}
-              className="flex-1 bg-[#1e2732] text-[#e7e9ea] placeholder-[#71767b] rounded-full px-4 py-2 text-sm outline-none focus:ring-1 focus:ring-brand"
-            />
-            <button
-              type="submit"
-              disabled={!input.trim() || sending}
-              className="p-2 rounded-full bg-brand text-white disabled:opacity-40 transition-opacity hover:bg-brand/90"
-            >
-              {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-            </button>
+            {sendError && <p className="text-red-400 text-xs px-1">{sendError}</p>}
+            <div className="flex items-center gap-3">
+              <input
+                value={input}
+                onChange={e => setInput(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) handleSend(e) }}
+                placeholder="Escribí un mensaje..."
+                maxLength={1000}
+                className="flex-1 bg-[#1e2732] text-[#e7e9ea] placeholder-[#71767b] rounded-full px-4 py-2 text-sm outline-none focus:ring-1 focus:ring-brand"
+              />
+              <button
+                type="submit"
+                disabled={!input.trim() || sending}
+                className="p-2 rounded-full bg-brand text-white disabled:opacity-40 transition-opacity hover:bg-brand/90"
+              >
+                {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+              </button>
+            </div>
           </form>
         </div>
       ) : (
