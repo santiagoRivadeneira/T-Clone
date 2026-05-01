@@ -56,6 +56,13 @@ export const api = {
     unreadCount: () => req('/notifications/unread-count'),
     markRead: () => req('/notifications/read', { method: 'PATCH' }),
   },
+  messages: {
+    conversations: () => req('/messages'),
+    unreadCount: () => req('/messages/unread-count'),
+    get: (username, cursor) => req(`/messages/${username}${cursor ? `?cursor=${cursor}` : ''}`),
+    send: (username, content) => req(`/messages/${username}`, { method: 'POST', body: JSON.stringify({ content }) }),
+    markRead: (username) => req(`/messages/${username}/read`, { method: 'PATCH' }),
+  },
   users: {
     profile: (username) => req(`/users/${username}`),
     tweets: (username, cursor) =>

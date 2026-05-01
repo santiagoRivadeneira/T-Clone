@@ -7,6 +7,7 @@ import tweetRoutes from './routes/tweets'
 import userRoutes from './routes/users'
 import streamRoutes from './routes/stream'
 import notificationRoutes from './routes/notifications'
+import messageRoutes from './routes/messages'
 
 export function buildApp(opts: FastifyServerOptions = {}) {
   const isDev = process.env.NODE_ENV === 'development'
@@ -66,6 +67,7 @@ export function buildApp(opts: FastifyServerOptions = {}) {
   app.register(userRoutes, { prefix: '/api/users' })
   app.register(streamRoutes, { prefix: '/api/stream' })
   app.register(notificationRoutes, { prefix: '/api/notifications' })
+  app.register(messageRoutes, { prefix: '/api/messages' })
 
   app.get('/health', async () => ({ status: 'ok' }))
 

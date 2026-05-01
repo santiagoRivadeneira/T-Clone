@@ -18,14 +18,16 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  tweets        Tweet[]
-  likes         Like[]
-  retweets      Retweet[]
-  bookmarks     Bookmark[]
-  followers     Follow[]         @relation("following")
-  following     Follow[]         @relation("follower")
-  notifications Notification[]   @relation("notif_recipient")
-  notifActions  Notification[]   @relation("notif_actor")
+  tweets           Tweet[]
+  likes            Like[]
+  retweets         Retweet[]
+  bookmarks        Bookmark[]
+  followers        Follow[]         @relation("following")
+  following        Follow[]         @relation("follower")
+  notifications    Notification[]   @relation("notif_recipient")
+  notifActions     Notification[]   @relation("notif_actor")
+  messagesSent     Message[]        @relation("MessagesSent")
+  messagesReceived Message[]        @relation("MessagesReceived")
 }
 
 model Tweet {
@@ -87,6 +89,21 @@ model Follow {
   following User @relation("following", fields: [followingId], references: [id], onDelete: Cascade)
 
   @@id([followerId, followingId])
+}
+
+model Message {
+  id          String   @id @default(cuid())
+  senderId    String
+  recipientId String
+  content     String   @db.VarChar(1000)
+  read        Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  sender    User @relation("MessagesSent", fields: [senderId], references: [id], onDelete: Cascade)
+  recipient User @relation("MessagesReceived", fields: [recipientId], references: [id], onDelete: Cascade)
+
+  @@index([senderId, recipientId, createdAt])
+  @@index([recipientId, read])
 }
 
 enum NotifType {

@@ -40,8 +40,19 @@ export default function Sidebar() {
   })
   const unreadCount = unreadData?.count ?? 0
 
+  const { data: msgUnreadData } = useQuery({
+    queryKey: ['msg-unread-count'],
+    queryFn: api.messages.unreadCount,
+    staleTime: 60_000,
+  })
+  const msgUnreadCount = msgUnreadData?.count ?? 0
+
   useSSE('new-notification', () => {
     queryClient.setQueryData(['notif-unread-count'], (old) => ({ count: (old?.count ?? 0) + 1 }))
+  })
+
+  useSSE('new-message', () => {
+    queryClient.setQueryData(['msg-unread-count'], (old) => ({ count: (old?.count ?? 0) + 1 }))
   })
 
   function handleLogout() {
@@ -93,8 +104,25 @@ export default function Sidebar() {
               <span className="hidden xl:block text-[17px]">Notificaciones</span>
             </NavLink>
 
+            {/* Mensajes — with unread badge */}
+            <NavLink
+              to="/messages"
+              className={({ isActive }) => cn('nav-item', isActive && 'active')}
+              onClick={() => queryClient.setQueryData(['msg-unread-count'], { count: 0 })}
+            >
+              <span className="relative">
+                <Mail className="sidebar-icon" />
+                {msgUnreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-brand text-white text-[10px] font-bold rounded-full flex items-center justify-center px-0.5">
+                    {msgUnreadCount > 99 ? '99+' : msgUnreadCount}
+                  </span>
+                )}
+              </span>
+              <span className="hidden xl:block text-[17px]">Mensajes</span>
+            </NavLink>
+
             {/* Resto de items */}
-            {navItems.slice(2).map(({ to, icon: Icon, label, exact }) => (
+            {navItems.slice(3).map(({ to, icon: Icon, label, exact }) => (
               <NavLink key={to} to={to} end={exact} className={({ isActive }) => cn('nav-item', isActive && 'active')}>
                 <Icon className="sidebar-icon" />
                 <span className="hidden xl:block text-[17px]">{label}</span>
