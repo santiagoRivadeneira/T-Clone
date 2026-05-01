@@ -34,6 +34,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
       where: { OR: [{ email: data.email }, { username: data.username }] },
     })
     if (existing) {
+      fastify.log.warn({ username: data.username, email: data.email }, 'register failed: already taken')
       return reply.status(409).send({ error: 'Email or username already taken' })
     }
 
@@ -60,6 +61,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
       { sub: user.id, username: user.username },
       { expiresIn: '7d' }
     )
+    fastify.log.info({ userId: user.id, username: user.username }, 'user registered')
     return reply.status(201).send({ user, token })
   })
 
@@ -68,11 +70,13 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
 
     const user = await prisma.user.findUnique({ where: { email: data.email } })
     if (!user) {
+      fastify.log.warn({ email: data.email }, 'login failed: user not found')
       return reply.status(401).send({ error: 'Invalid credentials' })
     }
 
     const valid = await bcrypt.compare(data.password, user.passwordHash)
     if (!valid) {
+      fastify.log.warn({ email: data.email, username: user.username }, 'login failed: wrong password')
       return reply.status(401).send({ error: 'Invalid credentials' })
     }
 
@@ -80,6 +84,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
       { sub: user.id, username: user.username },
       { expiresIn: '7d' }
     )
+    fastify.log.info({ userId: user.id, username: user.username }, 'user logged in')
     const { passwordHash: _, ...userWithoutPassword } = user
     return reply.send({ user: userWithoutPassword, token })
   })

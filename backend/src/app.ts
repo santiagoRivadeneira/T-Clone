@@ -9,8 +9,26 @@ import streamRoutes from './routes/stream'
 import notificationRoutes from './routes/notifications'
 
 export function buildApp(opts: FastifyServerOptions = {}) {
+  const isDev = process.env.NODE_ENV === 'development'
+  const isTest = process.env.NODE_ENV === 'test'
+
   const app = Fastify({
-    logger: process.env.NODE_ENV !== 'test',
+    logger: isTest
+      ? false
+      : {
+          level: isDev ? 'debug' : 'info',
+          ...(isDev && {
+            transport: {
+              target: 'pino-pretty',
+              options: {
+                colorize: true,
+                translateTime: 'HH:MM:ss.l',
+                ignore: 'pid,hostname',
+                messageFormat: '{msg}',
+              },
+            },
+          }),
+        },
     ...opts,
   })
 
@@ -27,18 +45,19 @@ export function buildApp(opts: FastifyServerOptions = {}) {
     secret: process.env.JWT_SECRET || 'dev-secret-change-in-production',
   })
 
-  app.setErrorHandler((error, _request, reply) => {
+  app.setErrorHandler((error, request, reply) => {
     if (error instanceof ZodError) {
+      app.log.warn({ url: request.url, errors: error.errors }, 'validation error')
       return reply.status(400).send({ error: 'Validation error', details: error.errors })
     }
-    // Prisma unique constraint violation
     if ((error as any).code === 'P2002') {
+      app.log.warn({ url: request.url }, 'unique constraint violation')
       return reply.status(409).send({ error: 'Resource already exists' })
     }
     if (error.statusCode) {
       return reply.status(error.statusCode).send({ error: error.message })
     }
-    app.log.error(error)
+    app.log.error({ err: error, url: request.url }, 'unhandled error')
     return reply.status(500).send({ error: 'Internal server error' })
   })
 

@@ -10,6 +10,7 @@ const streamRoutes: FastifyPluginAsync = async (fastify) => {
       const decoded = fastify.jwt.verify<{ sub: string }>(token ?? '')
       userId = decoded.sub
     } catch {
+      fastify.log.warn('SSE connection rejected: invalid token')
       return reply.status(401).send({ error: 'Unauthorized' })
     }
 
@@ -21,6 +22,8 @@ const streamRoutes: FastifyPluginAsync = async (fastify) => {
     })
     // Tell the client to retry after 3s if connection drops
     reply.raw.write('retry: 3000\n\n')
+
+    fastify.log.info({ userId }, 'SSE connected')
 
     const unsubscribe = subscribe(userId, {
       write: (chunk) => reply.raw.write(chunk),
@@ -35,6 +38,7 @@ const streamRoutes: FastifyPluginAsync = async (fastify) => {
       request.raw.on('close', () => {
         clearInterval(ping)
         unsubscribe()
+        fastify.log.info({ userId }, 'SSE disconnected')
         resolve()
       })
     })
