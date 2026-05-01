@@ -184,21 +184,31 @@ export default function Profile() {
             <AvatarImage src={avatarUrl} alt={profileUser.displayName} />
             <AvatarFallback className="text-2xl">{profileUser.displayName[0]}</AvatarFallback>
           </Avatar>
-          <div className="mt-14">
+          <div className="mt-14 flex items-center gap-2">
             {isOwn ? (
               <Button variant="outline" size="sm" className="font-bold" data-testid="edit-profile-btn" onClick={() => navigate('/settings/account')}>
                 Editar perfil
               </Button>
             ) : (
-              <Button
-                variant={isFollowing ? 'unfollow' : 'follow'}
-                size="sm"
-                className="font-bold"
-                onClick={handleFollowToggle}
-                data-testid="follow-btn"
-              >
-                {isFollowing ? 'Siguiendo' : 'Seguir'}
-              </Button>
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="font-bold"
+                  onClick={() => navigate(`/messages/${profileUser.username}`)}
+                >
+                  Mensaje
+                </Button>
+                <Button
+                  variant={isFollowing ? 'unfollow' : 'follow'}
+                  size="sm"
+                  className="font-bold"
+                  onClick={handleFollowToggle}
+                  data-testid="follow-btn"
+                >
+                  {isFollowing ? 'Siguiendo' : 'Seguir'}
+                </Button>
+              </>
             )}
           </div>
         </div>

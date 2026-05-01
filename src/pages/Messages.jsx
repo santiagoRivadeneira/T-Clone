@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { useParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, Send, Loader2 } from 'lucide-react'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
@@ -9,9 +10,10 @@ import { formatTimeAgo } from '@/lib/utils'
 import { cn } from '@/lib/utils'
 
 export default function Messages() {
+  const { conversationId } = useParams()
   const { user } = useAuth()
   const queryClient = useQueryClient()
-  const [activeUsername, setActiveUsername] = useState(null)
+  const [activeUsername, setActiveUsername] = useState(conversationId ?? null)
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
   const bottomRef = useRef(null)
