@@ -44,10 +44,10 @@ export default function Messages() {
     // Update chat if it's the active conversation
     if (sender.username === activeUsername) {
       queryClient.setQueryData(['chat', activeUsername], (old) => {
-        if (!old) return old
-        const exists = old.messages.some(m => m.id === message.id)
+        const base = old ?? { messages: [], partner: null, nextCursor: null }
+        const exists = base.messages.some(m => m.id === message.id)
         if (exists) return old
-        return { ...old, messages: [...old.messages, message] }
+        return { ...base, messages: [...base.messages, message] }
       })
       // Mark as read immediately since the chat is open
       api.messages.markRead(sender.username)
@@ -65,10 +65,9 @@ export default function Messages() {
     setSending(true)
     try {
       const res = await api.messages.send(activeUsername, content)
-      // Optimistically append own message
       queryClient.setQueryData(['chat', activeUsername], (old) => {
-        if (!old) return old
-        return { ...old, messages: [...old.messages, res.message] }
+        const base = old ?? { messages: [], partner: null, nextCursor: null }
+        return { ...base, messages: [...base.messages, res.message] }
       })
       queryClient.invalidateQueries({ queryKey: ['conversations'] })
     } catch {
