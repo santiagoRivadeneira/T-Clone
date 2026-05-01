@@ -16,7 +16,14 @@ export default function Messages() {
   const [activeUsername, setActiveUsername] = useState(conversationId ?? null)
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
+  // Local state for real-time messages — avoids cache refetch overwriting optimistic updates
+  const [liveMessages, setLiveMessages] = useState([])
   const bottomRef = useRef(null)
+
+  // Reset live messages when switching conversations
+  useEffect(() => {
+    setLiveMessages([])
+  }, [activeUsername])
 
   const { data: convData, isLoading: convLoading } = useQuery({
     queryKey: ['conversations'],
@@ -31,28 +38,30 @@ export default function Messages() {
   })
 
   const conversations = convData?.conversations ?? []
-  const messages = chatData?.messages ?? []
+  const historicalMessages = chatData?.messages ?? []
   const partner = chatData?.partner ?? null
+
+  // Combine historical + live, deduplicating by id
+  const historicalIds = new Set(historicalMessages.map(m => m.id))
+  const allMessages = [
+    ...historicalMessages,
+    ...liveMessages.filter(m => !historicalIds.has(m.id)),
+  ]
 
   // Scroll to bottom when messages change
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages.length])
+  }, [allMessages.length])
 
   // Real-time: receive new messages via SSE
   useSSE('new-message', ({ message, sender }) => {
-    // Update chat if it's the active conversation
     if (sender.username === activeUsername) {
-      queryClient.setQueryData(['chat', activeUsername], (old) => {
-        const base = old ?? { messages: [], partner: null, nextCursor: null }
-        const exists = base.messages.some(m => m.id === message.id)
-        if (exists) return old
-        return { ...base, messages: [...base.messages, message] }
+      setLiveMessages(prev => {
+        if (prev.some(m => m.id === message.id)) return prev
+        return [...prev, message]
       })
-      // Mark as read immediately since the chat is open
       api.messages.markRead(sender.username)
     }
-    // Always refresh conversations list to update last message + unread count
     queryClient.invalidateQueries({ queryKey: ['conversations'] })
     queryClient.invalidateQueries({ queryKey: ['msg-unread-count'] })
   })
@@ -65,10 +74,8 @@ export default function Messages() {
     setSending(true)
     try {
       const res = await api.messages.send(activeUsername, content)
-      queryClient.setQueryData(['chat', activeUsername], (old) => {
-        const base = old ?? { messages: [], partner: null, nextCursor: null }
-        return { ...base, messages: [...base.messages, res.message] }
-      })
+      // Append directly to local state — instant, no cache dependency
+      setLiveMessages(prev => [...prev, res.message])
       queryClient.invalidateQueries({ queryKey: ['conversations'] })
     } catch {
       setInput(content)
@@ -79,7 +86,6 @@ export default function Messages() {
 
   function openConversation(username) {
     setActiveUsername(username)
-    // Mark as read
     api.messages.markRead(username).then(() => {
       queryClient.invalidateQueries({ queryKey: ['conversations'] })
       queryClient.invalidateQueries({ queryKey: ['msg-unread-count'] })
@@ -178,10 +184,10 @@ export default function Messages() {
               <div className="flex justify-center py-16">
                 <Loader2 className="w-6 h-6 text-brand animate-spin" />
               </div>
-            ) : messages.length === 0 ? (
+            ) : allMessages.length === 0 ? (
               <p className="text-center text-[#71767b] text-sm py-8">Todavía no hay mensajes. ¡Empezá la conversación!</p>
             ) : (
-              messages.map((msg) => {
+              allMessages.map((msg) => {
                 const isOwn = msg.senderId === user?.id
                 return (
                   <div key={msg.id} className={cn('flex', isOwn ? 'justify-end' : 'justify-start')}>
