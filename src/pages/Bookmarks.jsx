@@ -27,7 +27,7 @@ export default function Bookmarks() {
 
   return (
     <div className="pb-16 md:pb-0">
-      <div className="sticky top-0 z-30 bg-black/80 backdrop-blur-md border-b border-dark-border px-4 py-3">
+      <div className="sticky top-0 z-30 bg-blur-header backdrop-blur-md border-b border-dark-border px-4 py-3">
         <h1 className="text-xl font-bold text-[#e7e9ea]">Guardados</h1>
       </div>
 

@@ -82,7 +82,7 @@ export default function Home() {
   return (
     <div className="pb-16 md:pb-0">
       {/* Header */}
-      <div className="sticky top-0 z-30 bg-black/80 backdrop-blur-md border-b border-dark-border">
+      <div className="sticky top-0 z-30 bg-blur-header backdrop-blur-md border-b border-dark-border">
         <div className="flex">
           {['for-you', 'following'].map(tab => (
             <button

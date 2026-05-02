@@ -7,13 +7,25 @@
 @layer base {
   :root {
     --radius: 0.75rem;
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Light mode colors */
+    --c-bg:      #f7f9f9;
+    --c-surface: #ffffff;
+    --c-border:  #cfd9de;
+    --c-hover:   #e6e6e6;
+    --c-input:   #eff3f4;
+    --c-text:    #0f1419;
+    --c-subtext: #4a5568;
   }
 
   .dark {
-    --background: 0 0% 0%;
-    --foreground: 210 40% 98%;
+    /* Dark mode colors */
+    --c-bg:      #000000;
+    --c-surface: #16181c;
+    --c-border:  #2f3336;
+    --c-hover:   #1d1f23;
+    --c-input:   #202327;
+    --c-text:    #e7e9ea;
+    --c-subtext: #71767b;
   }
 
   * {
@@ -26,7 +38,9 @@
   }
 
   body {
-    @apply bg-black text-[#e7e9ea] font-sans antialiased;
+    background-color: var(--c-bg);
+    color: var(--c-text);
+    @apply font-sans antialiased;
     min-height: 100vh;
   }
 
@@ -59,7 +73,8 @@
   .tweet-action-btn.bookmark.active { @apply text-brand; }
 
   .nav-item {
-    @apply flex items-center gap-4 px-3 py-3 rounded-full text-[#e7e9ea] hover:bg-dark-hover transition-colors duration-150 cursor-pointer w-fit xl:w-full;
+    @apply flex items-center gap-4 px-3 py-3 rounded-full hover:bg-dark-hover transition-colors duration-150 cursor-pointer w-fit xl:w-full;
+    color: var(--c-text);
   }
   .nav-item.active {
     @apply font-bold;
@@ -70,13 +85,29 @@
   }
 
   .post-input {
-    @apply w-full bg-transparent border-none outline-none resize-none text-[#e7e9ea] placeholder-[#71767b] text-lg;
+    @apply w-full bg-transparent border-none outline-none resize-none placeholder-[#71767b] text-lg;
+    color: var(--c-text);
   }
 
   .tab-item {
-    @apply flex-1 flex items-center justify-center py-4 text-[#71767b] font-medium hover:bg-dark-hover transition-colors cursor-pointer border-b-2 border-transparent;
+    @apply flex-1 flex items-center justify-center py-4 font-medium hover:bg-dark-hover transition-colors cursor-pointer border-b-2 border-transparent;
+    color: var(--c-subtext);
   }
   .tab-item.active {
-    @apply text-[#e7e9ea] font-bold border-brand;
+    @apply font-bold border-brand;
+    color: var(--c-text);
   }
+
+  /* Sticky header with adaptive background + blur */
+  .bg-blur-header {
+    background-color: color-mix(in srgb, var(--c-bg) 85%, transparent);
+  }
+}
+
+/* Light mode: override hardcoded dark text colors used in components */
+html:not(.dark) .text-\[#e7e9ea\] {
+  color: var(--c-text) !important;
+}
+html:not(.dark) .text-\[#71767b\] {
+  color: var(--c-subtext) !important;
 }

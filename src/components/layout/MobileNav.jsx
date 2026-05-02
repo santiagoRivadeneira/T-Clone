@@ -14,7 +14,7 @@ export default function MobileNav() {
   const { user } = useAuth()
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-black border-t border-dark-border flex items-center justify-around px-2 h-14">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-dark-bg border-t border-dark-border flex items-center justify-around px-2 h-14">
       {items.map(({ to, icon: Icon, exact }) => (
         <NavLink
           key={to}

@@ -28,5 +28,15 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, './src'),
     },
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'lcov'],
+      include: ['src/**/*.{js,jsx}'],
+      exclude: [
+        'src/tests/**',
+        'src/main.jsx',
+        'src/data/**',
+      ],
+    },
   },
 })

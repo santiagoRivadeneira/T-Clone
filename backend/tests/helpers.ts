@@ -3,7 +3,11 @@ import { FastifyInstance } from 'fastify'
 import { prisma } from '../src/lib/prisma'
 
 export async function cleanDatabase() {
+  await prisma.message.deleteMany()
+  await prisma.notification.deleteMany()
   await prisma.like.deleteMany()
+  await prisma.retweet.deleteMany()
+  await prisma.bookmark.deleteMany()
   await prisma.follow.deleteMany()
   await prisma.tweet.deleteMany()
   await prisma.user.deleteMany()

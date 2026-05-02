@@ -35,7 +35,7 @@ export default function Explore() {
   return (
     <div className="pb-16 md:pb-0">
       {/* Search bar */}
-      <div className="sticky top-0 z-30 bg-black/80 backdrop-blur-md px-4 py-3 border-b border-dark-border">
+      <div className="sticky top-0 z-30 bg-blur-header backdrop-blur-md px-4 py-3 border-b border-dark-border">
         <div className="relative">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#71767b]" />
           <Input
@@ -57,7 +57,7 @@ export default function Explore() {
 
       {/* Tabs */}
       {!isSearching && (
-        <div className="flex overflow-x-auto border-b border-dark-border sticky top-[68px] z-20 bg-black scrollbar-none">
+        <div className="flex overflow-x-auto border-b border-dark-border sticky top-[68px] z-20 bg-dark-bg scrollbar-none">
           {tabs.map(tab => (
             <button
               key={tab}

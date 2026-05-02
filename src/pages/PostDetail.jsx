@@ -122,7 +122,7 @@ export default function PostDetail() {
   return (
     <div className="pb-16 md:pb-0">
       {/* Header */}
-      <div className="sticky top-0 z-30 bg-black/80 backdrop-blur-md px-4 py-3 flex items-center gap-4 border-b border-dark-border">
+      <div className="sticky top-0 z-30 bg-blur-header backdrop-blur-md px-4 py-3 flex items-center gap-4 border-b border-dark-border">
         <button
           onClick={() => navigate(-1)}
           className="p-2 -ml-2 rounded-full hover:bg-dark-hover transition-colors text-[#e7e9ea]"

@@ -22,11 +22,11 @@ export default {
           900: '#312e81',
         },
         dark: {
-          bg:      '#000000',
-          surface: '#16181c',
-          border:  '#2f3336',
-          hover:   '#1d1f23',
-          input:   '#202327',
+          bg:      'var(--c-bg)',
+          surface: 'var(--c-surface)',
+          border:  'var(--c-border)',
+          hover:   'var(--c-hover)',
+          input:   'var(--c-input)',
         },
       },
       fontFamily: {

@@ -54,7 +54,7 @@ export default function Settings() {
         'flex flex-col border-r border-dark-border',
         activeSection ? 'hidden md:flex md:w-[320px]' : 'flex w-full md:w-[320px]'
       )}>
-        <div className="sticky top-0 bg-black/80 backdrop-blur-md px-4 py-3 border-b border-dark-border">
+        <div className="sticky top-0 bg-blur-header backdrop-blur-md px-4 py-3 border-b border-dark-border">
           <h1 className="text-xl font-bold text-[#e7e9ea]">Configuración</h1>
         </div>
 
@@ -109,7 +109,7 @@ export default function Settings() {
       {/* Detail panel */}
       {activeSection ? (
         <div className="flex-1 overflow-y-auto">
-          <div className="sticky top-0 z-10 bg-black/80 backdrop-blur-md px-4 py-3 border-b border-dark-border flex items-center gap-4">
+          <div className="sticky top-0 z-10 bg-blur-header backdrop-blur-md px-4 py-3 border-b border-dark-border flex items-center gap-4">
             <button
               onClick={() => navigate('/settings')}
               className="md:hidden p-2 -ml-2 rounded-full hover:bg-dark-hover text-[#e7e9ea]"

@@ -17,14 +17,7 @@ export default function Messages() {
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
   const [sendError, setSendError] = useState(null)
-  // Local state for real-time messages — avoids cache refetch overwriting optimistic updates
-  const [liveMessages, setLiveMessages] = useState([])
   const bottomRef = useRef(null)
-
-  // Reset live messages when switching conversations
-  useEffect(() => {
-    setLiveMessages([])
-  }, [activeUsername])
 
   const { data: convData, isLoading: convLoading } = useQuery({
     queryKey: ['conversations'],
@@ -39,28 +32,24 @@ export default function Messages() {
   })
 
   const conversations = convData?.conversations ?? []
-  const historicalMessages = chatData?.messages ?? []
+  const messages = chatData?.messages ?? []
   const partner = chatData?.partner ?? null
 
-  // Combine historical + live, deduplicating by id
-  const historicalIds = new Set(historicalMessages.map(m => m.id))
-  const allMessages = [
-    ...historicalMessages,
-    ...liveMessages.filter(m => !historicalIds.has(m.id)),
-  ]
-
-  // Scroll to bottom when messages change
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [allMessages.length])
+  }, [messages.length])
 
-  // Real-time: receive new messages via SSE
+  function appendToChat(message) {
+    queryClient.setQueryData(['chat', activeUsername], (old) => {
+      const base = old ?? { messages: [], partner: null, nextCursor: null }
+      if ((base.messages ?? []).some(m => m.id === message.id)) return base
+      return { ...base, messages: [...(base.messages ?? []), message] }
+    })
+  }
+
   useSSE('new-message', ({ message, sender }) => {
     if (sender.username === activeUsername) {
-      setLiveMessages(prev => {
-        if (prev.some(m => m.id === message.id)) return prev
-        return [...prev, message]
-      })
+      appendToChat(message)
       api.messages.markRead(sender.username)
     }
     queryClient.invalidateQueries({ queryKey: ['conversations'] })
@@ -76,7 +65,7 @@ export default function Messages() {
     setSendError(null)
     try {
       const res = await api.messages.send(activeUsername, content)
-      setLiveMessages(prev => [...prev, res.message])
+      appendToChat(res.message)
       queryClient.invalidateQueries({ queryKey: ['conversations'] })
     } catch (err) {
       setInput(content)
@@ -105,7 +94,7 @@ export default function Messages() {
         showChat && 'hidden md:flex',
         !showChat && 'flex',
       )}>
-        <div className="sticky top-0 z-30 bg-black/80 backdrop-blur-md border-b border-dark-border px-4 py-3">
+        <div className="sticky top-0 z-30 bg-blur-header backdrop-blur-md border-b border-dark-border px-4 py-3">
           <h1 className="text-xl font-bold text-[#e7e9ea]">Mensajes</h1>
         </div>
 
@@ -159,7 +148,7 @@ export default function Messages() {
       {showChat ? (
         <div className="flex flex-col flex-1 min-w-0">
           {/* Chat header */}
-          <div className="sticky top-0 z-30 bg-black/80 backdrop-blur-md border-b border-dark-border px-4 py-3 flex items-center gap-3">
+          <div className="sticky top-0 z-30 bg-blur-header backdrop-blur-md border-b border-dark-border px-4 py-3 flex items-center gap-3">
             <button
               onClick={() => setActiveUsername(null)}
               className="md:hidden p-2 -ml-2 rounded-full hover:bg-dark-hover transition-colors text-[#e7e9ea]"
@@ -182,14 +171,14 @@ export default function Messages() {
 
           {/* Messages */}
           <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-2">
-            {chatLoading && allMessages.length === 0 ? (
+            {chatLoading && messages.length === 0 ? (
               <div className="flex justify-center py-16">
                 <Loader2 className="w-6 h-6 text-brand animate-spin" />
               </div>
-            ) : allMessages.length === 0 ? (
+            ) : messages.length === 0 ? (
               <p className="text-center text-[#71767b] text-sm py-8">Todavía no hay mensajes. ¡Empezá la conversación!</p>
             ) : (
-              allMessages.map((msg) => {
+              messages.map((msg) => {
                 const isOwn = msg.senderId === user?.id
                 return (
                   <div key={msg.id} className={cn('flex', isOwn ? 'justify-end' : 'justify-start')}>

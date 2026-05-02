@@ -62,7 +62,7 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen bg-black flex flex-col lg:flex-row">
+    <div className="min-h-screen bg-dark-bg flex flex-col lg:flex-row">
       {/* Left panel — brand */}
       <div className="hidden lg:flex flex-1 items-center justify-center bg-gradient-to-br from-brand-900 via-brand-700 to-brand-500 p-12">
         <div className="text-white max-w-md">

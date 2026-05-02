@@ -7,7 +7,7 @@ import { SSEProvider } from '@/context/SSEContext'
 export default function MainLayout() {
   return (
     <SSEProvider>
-      <div className="min-h-screen bg-black">
+      <div className="min-h-screen bg-dark-bg">
         <div className="max-w-[1265px] mx-auto flex">
           {/* Sidebar izquierdo */}
           <Sidebar />

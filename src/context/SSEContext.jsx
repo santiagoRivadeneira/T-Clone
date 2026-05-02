@@ -25,6 +25,7 @@ export function SSEProvider({ children }) {
     es.addEventListener('new-tweet', dispatch('new-tweet'))
     es.addEventListener('delete-tweet', dispatch('delete-tweet'))
     es.addEventListener('new-notification', dispatch('new-notification'))
+    es.addEventListener('new-message', dispatch('new-message'))
 
     return () => es.close()
   }, [user?.id]) // reconnect only when the logged-in user changes

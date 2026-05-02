@@ -50,7 +50,7 @@ const otherUser = {
 
 describe('Follow / Unfollow', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
+    vi.resetAllMocks()
     localStorage.clear()
     localStorage.setItem('tc_user', JSON.stringify(mockUser))
     localStorage.setItem('tc_token', 'fake-token')
@@ -121,7 +121,7 @@ describe('Follow / Unfollow', () => {
 
 describe('PostCard — like interactions', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
+    vi.resetAllMocks()
     localStorage.clear()
     localStorage.setItem('tc_user', JSON.stringify(mockUser))
     localStorage.setItem('tc_token', 'fake-token')
