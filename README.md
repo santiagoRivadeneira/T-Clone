@@ -182,39 +182,509 @@ Frontend test files:
 
 All endpoints are prefixed with `/api`. Protected routes require `Authorization: Bearer <token>`.
 
+> **Pagination** — pass `?cursor=<id>` to fetch the next page. All paginated responses include `nextCursor` (null when the last page is reached). Default page size is 20; maximum is 50 via `?limit=`.
+
+---
+
 ### Auth
 
-| Method | Path | Auth | Description |
-|---|---|---|---|
-| `POST` | `/api/auth/register` | No | Register new user |
-| `POST` | `/api/auth/login` | No | Login, returns JWT |
-| `GET` | `/api/auth/me` | Yes | Get current user |
-| `PATCH` | `/api/auth/me` | Yes | Update profile |
+#### `POST /api/auth/register`
+
+Creates a new user account and returns a JWT.
+
+**Request body**
+```json
+{
+  "email": "user@example.com",
+  "username": "alexdev",
+  "displayName": "Alex Dev",
+  "password": "password123"
+}
+```
+
+| Field | Type | Constraints |
+|---|---|---|
+| `email` | string | valid email |
+| `username` | string | 3–15 chars, letters/numbers/underscores only |
+| `displayName` | string | 1–50 chars |
+| `password` | string | min 8 chars |
+
+**Response `201`**
+```json
+{
+  "user": {
+    "id": "clxyz123",
+    "email": "user@example.com",
+    "username": "alexdev",
+    "displayName": "Alex Dev",
+    "avatarUrl": null,
+    "bio": null,
+    "createdAt": "2026-05-01T12:00:00.000Z"
+  },
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
+
+**Errors** — `409` email or username already taken · `400` validation error
+
+---
+
+#### `POST /api/auth/login`
+
+Authenticates an existing user and returns a JWT valid for 7 days.
+
+**Request body**
+```json
+{
+  "email": "user@example.com",
+  "password": "password123"
+}
+```
+
+**Response `200`**
+```json
+{
+  "user": {
+    "id": "clxyz123",
+    "email": "user@example.com",
+    "username": "alexdev",
+    "displayName": "Alex Dev",
+    "avatarUrl": null,
+    "bio": null,
+    "createdAt": "2026-05-01T12:00:00.000Z"
+  },
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
+
+**Errors** — `401` invalid credentials
+
+---
+
+#### `GET /api/auth/me` 🔒
+
+Returns the authenticated user's profile including follower/tweet counts.
+
+**Response `200`**
+```json
+{
+  "user": {
+    "id": "clxyz123",
+    "email": "user@example.com",
+    "username": "alexdev",
+    "displayName": "Alex Dev",
+    "avatarUrl": null,
+    "bio": "Full-stack dev",
+    "createdAt": "2026-05-01T12:00:00.000Z",
+    "_count": {
+      "followers": 42,
+      "following": 18,
+      "tweets": 7
+    }
+  }
+}
+```
+
+---
+
+#### `PATCH /api/auth/me` 🔒
+
+Updates the authenticated user's profile. All fields are optional.
+
+**Request body**
+```json
+{
+  "displayName": "Alex Developer",
+  "bio": "Building things on the web",
+  "avatarUrl": "https://example.com/avatar.png"
+}
+```
+
+| Field | Type | Constraints |
+|---|---|---|
+| `displayName` | string | 1–50 chars |
+| `bio` | string | max 160 chars |
+| `avatarUrl` | string | valid URL or empty string |
+
+**Response `200`** — updated user object (same shape as `GET /me`, without `_count`)
+
+---
 
 ### Tweets
 
-| Method | Path | Auth | Description |
-|---|---|---|---|
-| `GET` | `/api/tweets/timeline` | Yes | Paginated following timeline |
-| `POST` | `/api/tweets` | Yes | Create tweet (or reply with `replyToId`) |
-| `GET` | `/api/tweets/:id` | Yes | Get tweet with replies |
-| `DELETE` | `/api/tweets/:id` | Yes | Delete own tweet |
-| `POST` | `/api/tweets/:id/like` | Yes | Like a tweet |
-| `DELETE` | `/api/tweets/:id/like` | Yes | Unlike a tweet |
+#### `GET /api/tweets/timeline` 🔒
+
+Returns top-level tweets from users the authenticated user follows, newest first.
+
+**Query params** — `?cursor=<tweetId>` · `?limit=20` (max 50)
+
+**Response `200`**
+```json
+{
+  "tweets": [
+    {
+      "id": "tweet123",
+      "content": "Hello world!",
+      "imageUrl": null,
+      "replyToId": null,
+      "createdAt": "2026-05-01T13:00:00.000Z",
+      "author": {
+        "id": "clxyz123",
+        "username": "alexdev",
+        "displayName": "Alex Dev",
+        "avatarUrl": null
+      },
+      "liked": false,
+      "retweeted": false,
+      "bookmarked": false,
+      "likesCount": 5,
+      "repliesCount": 2,
+      "retweetsCount": 1
+    }
+  ],
+  "nextCursor": "tweet456"
+}
+```
+
+---
+
+#### `POST /api/tweets` 🔒
+
+Creates a new tweet. Set `replyToId` to post a reply.
+
+**Request body**
+```json
+{
+  "content": "Hello world!",
+  "replyToId": "tweet456",
+  "imageUrl": "https://example.com/image.png"
+}
+```
+
+| Field | Type | Constraints |
+|---|---|---|
+| `content` | string | 1–280 chars (trimmed) |
+| `replyToId` | string | optional — ID of the tweet being replied to |
+| `imageUrl` | string | optional — valid URL |
+
+**Response `201`** — `{ "tweet": { ...tweet object } }`
+
+**Errors** — `404` parent tweet not found (when `replyToId` is set) · `400` validation error
+
+---
+
+#### `GET /api/tweets/:id`
+
+Returns a single tweet with up to 50 replies nested inside. Auth is optional; if a valid token is provided, `liked`/`retweeted`/`bookmarked` flags reflect the caller's state.
+
+**Response `200`**
+```json
+{
+  "tweet": {
+    "id": "tweet123",
+    "content": "Hello world!",
+    "imageUrl": null,
+    "replyToId": null,
+    "createdAt": "2026-05-01T13:00:00.000Z",
+    "author": { "id": "...", "username": "alexdev", "displayName": "Alex Dev", "avatarUrl": null },
+    "liked": true,
+    "retweeted": false,
+    "bookmarked": false,
+    "likesCount": 5,
+    "repliesCount": 2,
+    "retweetsCount": 1,
+    "replies": [
+      {
+        "id": "tweet789",
+        "content": "Great post!",
+        "replyToId": "tweet123",
+        "author": { "id": "...", "username": "mariasol", "displayName": "Maria Sol", "avatarUrl": null },
+        "liked": false,
+        "retweeted": false,
+        "bookmarked": false,
+        "likesCount": 0,
+        "repliesCount": 0,
+        "retweetsCount": 0,
+        "createdAt": "2026-05-01T14:00:00.000Z"
+      }
+    ]
+  }
+}
+```
+
+**Errors** — `404` tweet not found
+
+---
+
+#### `DELETE /api/tweets/:id` 🔒
+
+Deletes the caller's own tweet. **Response `204` No Content.**
+
+**Errors** — `403` not the tweet's author · `404` tweet not found
+
+---
+
+#### `POST /api/tweets/:id/like` 🔒
+
+Likes a tweet. Idempotent — calling it on an already-liked tweet is a no-op.
+
+**Response `200`**
+```json
+{ "liked": true }
+```
+
+---
+
+#### `DELETE /api/tweets/:id/like` 🔒
+
+Unlikes a tweet. Idempotent. **Response `204` No Content.**
+
+---
+
+#### `POST /api/tweets/:id/retweet` 🔒
+
+Retweets a tweet. Idempotent.
+
+**Response `200`**
+```json
+{ "retweeted": true }
+```
+
+---
+
+#### `DELETE /api/tweets/:id/retweet` 🔒
+
+Undoes a retweet. Idempotent. **Response `204` No Content.**
+
+---
+
+#### `POST /api/tweets/:id/bookmark` 🔒
+
+Saves a tweet to the caller's bookmarks. Idempotent.
+
+**Response `200`**
+```json
+{ "bookmarked": true }
+```
+
+---
+
+#### `DELETE /api/tweets/:id/bookmark` 🔒
+
+Removes a tweet from the caller's bookmarks. Idempotent. **Response `204` No Content.**
+
+---
+
+#### `GET /api/tweets/bookmarks/list` 🔒
+
+Returns the authenticated user's bookmarked tweets, newest first.
+
+**Query params** — `?cursor=<tweetId>` · `?limit=20` (max 50)
+
+**Response `200`** — same shape as `/timeline` (`{ tweets: [...], nextCursor }`)
+
+---
 
 ### Users
 
-| Method | Path | Auth | Description |
-|---|---|---|---|
-| `GET` | `/api/users/search?q=` | Yes | Search users by name/username |
-| `GET` | `/api/users/:username` | Yes | Get user profile |
-| `GET` | `/api/users/:username/tweets` | Yes | User's tweets (paginated) |
-| `GET` | `/api/users/:username/followers` | Yes | Followers list |
-| `GET` | `/api/users/:username/following` | Yes | Following list |
-| `POST` | `/api/users/:username/follow` | Yes | Follow a user |
-| `DELETE` | `/api/users/:username/follow` | Yes | Unfollow a user |
+#### `GET /api/users/search?q=` 🔒
 
-Pagination: pass `?cursor=<tweetId>` to get the next page. Response includes `nextCursor` (null when exhausted).
+Searches users by username or display name (case-insensitive, partial match). Returns up to 20 results.
+
+**Query params** — `?q=alex` (max 100 chars)
+
+**Response `200`**
+```json
+{
+  "users": [
+    {
+      "id": "clxyz123",
+      "username": "alexdev",
+      "displayName": "Alex Dev",
+      "avatarUrl": null,
+      "bio": "Full-stack dev",
+      "isFollowing": false
+    }
+  ]
+}
+```
+
+---
+
+#### `GET /api/users/:username`
+
+Returns a user's public profile. Auth is optional; if authenticated, includes `isFollowing`.
+
+**Response `200`**
+```json
+{
+  "user": {
+    "id": "clxyz123",
+    "username": "alexdev",
+    "displayName": "Alex Dev",
+    "avatarUrl": null,
+    "bio": "Full-stack dev",
+    "createdAt": "2026-05-01T12:00:00.000Z",
+    "isFollowing": true,
+    "_count": {
+      "followers": 42,
+      "following": 18,
+      "tweets": 7
+    }
+  }
+}
+```
+
+**Errors** — `404` user not found
+
+---
+
+#### `GET /api/users/:username/tweets`
+
+Returns a user's top-level tweets (no replies), newest first.
+
+**Query params** — `?cursor=<tweetId>` · `?limit=20` (max 50)
+
+**Response `200`** — same shape as `/timeline`
+
+---
+
+#### `GET /api/users/:username/followers`
+
+Returns users who follow the given account.
+
+**Response `200`**
+```json
+{
+  "users": [
+    { "id": "...", "username": "mariasol", "displayName": "Maria Sol", "avatarUrl": null, "bio": null }
+  ]
+}
+```
+
+---
+
+#### `GET /api/users/:username/following`
+
+Returns users that the given account follows. Same response shape as `/followers`.
+
+---
+
+#### `POST /api/users/:username/follow` 🔒
+
+Follows a user. Idempotent. Cannot follow yourself.
+
+**Response `200`**
+```json
+{ "following": true }
+```
+
+**Errors** — `400` cannot follow yourself · `404` user not found
+
+---
+
+#### `DELETE /api/users/:username/follow` 🔒
+
+Unfollows a user. Idempotent. **Response `204` No Content.**
+
+---
+
+### Notifications
+
+#### `GET /api/notifications` 🔒
+
+Returns the authenticated user's notifications (likes, retweets, replies, follows), newest first. Also includes the current unread count.
+
+**Query params** — `?cursor=<notificationId>` · `?limit=20` (max 50)
+
+**Response `200`**
+```json
+{
+  "notifications": [
+    {
+      "id": "notif123",
+      "type": "LIKE",
+      "read": false,
+      "createdAt": "2026-05-01T15:00:00.000Z",
+      "actor": {
+        "id": "...",
+        "username": "mariasol",
+        "displayName": "Maria Sol",
+        "avatarUrl": null
+      },
+      "tweet": {
+        "id": "tweet123",
+        "content": "Hello world!"
+      }
+    }
+  ],
+  "nextCursor": "notif456",
+  "unreadCount": 3
+}
+```
+
+Notification `type` values: `LIKE` · `RETWEET` · `REPLY` · `FOLLOW`
+
+---
+
+#### `GET /api/notifications/unread-count` 🔒
+
+Lightweight polling endpoint for the sidebar badge.
+
+**Response `200`**
+```json
+{ "count": 3 }
+```
+
+---
+
+#### `PATCH /api/notifications/read` 🔒
+
+Marks all unread notifications as read.
+
+**Response `200`**
+```json
+{ "ok": true }
+```
+
+---
+
+### Real-time (Server-Sent Events)
+
+#### `GET /api/stream?token=<jwt>`
+
+Opens a persistent SSE connection for the authenticated user. The JWT is passed as a query parameter (not a header) because the browser's `EventSource` API does not support custom headers.
+
+```
+GET /api/stream?token=eyJhbGci...
+Accept: text/event-stream
+```
+
+The server sends a `retry: 3000` directive on connect and a keep-alive comment (`: ping`) every 25 seconds.
+
+**Event types**
+
+| Event | Payload | Description |
+|---|---|---|
+| `new-tweet` | tweet object | A followed user posted a new top-level tweet |
+| `delete-tweet` | `{ "id": "tweet123" }` | A followed user deleted a tweet |
+| `new-notification` | notification object | A new notification arrived for the user |
+
+**Example stream**
+
+```
+retry: 3000
+
+event: new-tweet
+data: {"id":"tweet999","content":"Live update!","author":{...},...}
+
+: ping
+
+event: new-notification
+data: {"id":"notif789","type":"LIKE","actor":{...},"tweet":{...}}
+```
+
+**Errors** — `401` missing or invalid token
 
 ---
 
